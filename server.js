@@ -106,6 +106,8 @@ Rules:
   return base;
 }
 
+const tgBuffer = [];
+
 // ---------------- HTTP server ----------------
 function readBody(req) {
   return new Promise((resolve) => {
@@ -138,9 +140,37 @@ const server = http.createServer(async (req, res) => {
     return res.end('<Response/>');
   }
 
+  // Telegram webhook for "The Boys" group watcher (-5176022432). Telegram posts updates here;
+  // path carries the secret since Telegram can't do bearer headers. Buffers group text messages
+  // in memory (drained every ~2 min by the watcher; buffer is best-effort, not a ledger).
+  if (url.pathname.startsWith('/telegram-webhook/') && req.method === 'POST') {
+    const tok = url.pathname.split('/')[2];
+    if (tok !== CALLBOT_SECRET) return send(403, { error: 'forbidden' });
+    let body; try { body = JSON.parse(await readBody(req) || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    const m = body.message;
+    if (m && m.chat && String(m.chat.id) === '-5176022432' && m.text) {
+      tgBuffer.push({
+        update_id: body.update_id,
+        message_id: m.message_id,
+        from: (m.from && ((m.from.first_name || '') + (m.from.last_name ? ' ' + m.from.last_name : '')).trim()) || (m.from && m.from.username) || 'unknown',
+        user_id: m.from && m.from.id,
+        text: m.text,
+        date: m.date
+      });
+      if (tgBuffer.length > 200) tgBuffer.shift();
+      console.log('tg group msg', body.update_id, String(m.text).slice(0, 60));
+    }
+    return send(200, { ok: true });
+  }
+
   // Bearer-authenticated API
   const auth = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (auth !== CALLBOT_SECRET) return send(401, { error: 'unauthorized' });
+
+  if (url.pathname === '/v1/telegram' && req.method === 'GET') {
+    const after = Number(url.searchParams.get('after') || 0);
+    return send(200, { messages: tgBuffer.filter(x => x.update_id > after) });
+  }
 
   if (url.pathname === '/v1/calls' && req.method === 'POST') {
     let body;
