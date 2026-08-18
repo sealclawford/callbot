@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: callbot
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CALLBOT_SECRET
+        sync: false
+      - key: TWILIO_FROM
+        value: "+18573416628"
+      - key: PUBLIC_HOST
+        sync: false
+      - key: PORT
+        value: "3000"
