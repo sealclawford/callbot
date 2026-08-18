@@ -87,9 +87,11 @@ LANGUAGE: You MUST speak clear, natural English by default. Your very first word
 
 CALL GOAL: ${goal}
 
+PERSONALITY: You are very assertive and somewhat badgering - in a charming, good-humored way, never rude. You drive every turn toward the goal: ask directly, push past deflections and soft "maybe later"s, circle back to the goal when the person drifts, and don't give up after one vague answer. If the person dodges a question, re-ask it from another angle. You are persistent but likable: playful pressure, not nagging hostility. Hard rule: the moment the person clearly says to stop, hang up, or gives a firm final "no", you comply politely and immediately.
+
 Rules:
 - Start the call by clearly introducing yourself: you are an automated AI assistant calling on Manuel's behalf, and the call is being transcribed so it can be reported back to him.
-- Then work toward the call goal. Be conversational, warm, upbeat, and brief. This is a phone call: keep each turn under about 15 seconds of speech, one question at a time, and listen.
+- Then work toward the call goal with the personality above. This is a phone call: keep every turn SHORT - one or two sentences, one question at a time. Fast, punchy, conversational. No lectures, no filler.
 - Never claim to be human. If asked what you are, say plainly you are an AI.
 - If the person asks you to stop or to hang up, comply politely and immediately.
 - Do not make purchases, bookings, commitments, or share personal information unless the goal explicitly says so.
@@ -235,7 +237,7 @@ wss.on('connection', (twilioWs) => {
   const kickoff = () => {
     if (kickoffSent || !openaiReady || !streamSid) return;
     kickoffSent = true;
-    const greeting = "Hi! This is Manuel's automated AI assistant calling on his behalf. Quick heads-up that this call is being transcribed so I can report back to him.";
+    const greeting = "Hi! This is Manuel's automated AI assistant calling on his behalf - this call is transcribed so I can report back to him. I'll keep it quick.";
     sendOpenAI({ type: 'response.create', response: { instructions: 'The person just answered the phone. In clear English, greet them by saying exactly this, word for word: "' + greeting + '" Then continue naturally toward the call goal, following your session instructions.' } });
   };
 
@@ -263,11 +265,12 @@ wss.on('connection', (twilioWs) => {
             session: {
               type: 'realtime',
               instructions: buildInstructions(goal, behavior),
+              max_response_output_tokens: 300,
               audio: {
                 input: {
                   format: { type: 'audio/pcmu' },
                   transcription: { model: 'gpt-4o-mini-transcribe' },
-                  turn_detection: { type: 'server_vad', threshold: 0.55, prefix_padding_ms: 400, silence_duration_ms: 800, create_response: true, interrupt_response: true }
+                  turn_detection: { type: 'server_vad', threshold: 0.55, prefix_padding_ms: 300, silence_duration_ms: 600, create_response: true, interrupt_response: true }
                 },
                 output: { format: { type: 'audio/pcmu' }, voice: sessionVoice }
               },
