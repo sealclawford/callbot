@@ -1,0 +1,357 @@
+// callbot v1 - Twilio <-> OpenAI Realtime voice bridge
+// Routes:
+//   POST /v1/calls            {to, goal, from?}   (Bearer auth) - place one outbound call
+//   GET  /v1/calls                              (Bearer auth) - list call records
+//   GET  /v1/calls/:sid                         (Bearer auth) - full record (transcript, summary, usage)
+//   POST /twilio-status                         (Twilio webhook) - call status updates
+//   WS   /media-stream                          (Twilio Media Stream)
+//   GET  /health
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const WebSocket = require('ws');
+
+const PORT = process.env.PORT || 3000;
+const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const OPENAI_KEY = process.env.OPENAI_API_KEY;
+const FROM_NUMBER = process.env.TWILIO_FROM || '+18573416628';
+const CALLBOT_SECRET = process.env.CALLBOT_SECRET;
+const PUBLIC_HOST = process.env.PUBLIC_HOST; // e.g. foo.trycloudflare.com (no scheme)
+const DATA_DIR = path.join(__dirname, 'data');
+const MAX_CALL_SECONDS = 300;
+
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+
+const calls = new Map(); // callSid -> record
+
+function loadRecord(sid) {
+  if (calls.has(sid)) return calls.get(sid);
+  try {
+    const r = JSON.parse(fs.readFileSync(path.join(DATA_DIR, sid + '.json'), 'utf8'));
+    calls.set(sid, r);
+    return r;
+  } catch { return null; }
+}
+function saveRecord(rec) {
+  calls.set(rec.callSid, rec);
+  fs.writeFileSync(path.join(DATA_DIR, rec.callSid + '.json'), JSON.stringify(rec, null, 2));
+}
+
+function twilioPost(path_, params) {
+  return new Promise((resolve, reject) => {
+    const body = new URLSearchParams(params).toString();
+    const req = https.request({
+      method: 'POST',
+      host: 'api.twilio.com',
+      path: path_,
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(TWILIO_SID + ':' + TWILIO_TOKEN).toString('base64'),
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    }, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try { const j = JSON.parse(d); if (res.statusCode >= 400) reject(new Error(JSON.stringify(j))); else resolve(j); }
+        catch { res.statusCode >= 400 ? reject(new Error(d)) : resolve(d); }
+      });
+    });
+    req.on('error', reject);
+    req.end(body);
+  });
+}
+
+function openaiChat(messages) {
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      method: 'POST',
+      host: 'api.openai.com',
+      path: '/v1/chat/completions',
+      headers: { 'Authorization': 'Bearer ' + OPENAI_KEY, 'Content-Type': 'application/json' }
+    }, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch { reject(new Error(d)); } });
+    });
+    req.on('error', reject);
+    req.end(JSON.stringify({ model: 'gpt-4o-mini', messages }));
+  });
+}
+
+function buildInstructions(goal, behavior) {
+  let base = `You are an automated AI voice assistant speaking on a live phone call. You placed this call on behalf of a person named Manuel, using a calling bot that he asked for and approved.
+
+LANGUAGE: You MUST speak clear, natural English by default. Your very first words on the call are in English, and you stay in English unless the person you called clearly speaks to you in another language.
+
+CALL GOAL: ${goal}
+
+Rules:
+- Start the call by clearly introducing yourself: you are an automated AI assistant calling on Manuel's behalf, and the call is being transcribed so it can be reported back to him.
+- Then work toward the call goal. Be conversational, warm, upbeat, and brief. This is a phone call: keep each turn under about 15 seconds of speech, one question at a time, and listen.
+- Never claim to be human. If asked what you are, say plainly you are an AI.
+- If the person asks you to stop or to hang up, comply politely and immediately.
+- Do not make purchases, bookings, commitments, or share personal information unless the goal explicitly says so.
+- When the goal is achieved - or it becomes clear it cannot be achieved on this call - wrap up politely, say goodbye, then use the end_call tool.
+- If you reach voicemail, leave a short message stating who you are and the goal, say goodbye, and use end_call.`;
+  if (behavior) {
+    base += `\n\nADDITIONAL INSTRUCTIONS FROM MANUEL (follow these unless they conflict with the rules above):\n${behavior}`;
+  }
+  return base;
+}
+
+// ---------------- HTTP server ----------------
+function readBody(req) {
+  return new Promise((resolve) => {
+    let d = '';
+    req.on('data', c => d += c);
+    req.on('end', () => resolve(d));
+  });
+}
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, 'http://x');
+  const send = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
+
+  if (url.pathname === '/health') return send(200, { ok: true, calls: calls.size });
+
+  if (url.pathname === '/twilio-status' && req.method === 'POST') {
+    const body = new URLSearchParams(await readBody(req));
+    const rec = loadRecord(body.get("CallSid")); console.log("statuscb", body.get("CallSid"), body.get("CallStatus"));
+    if (rec) {
+      rec.status = body.get('CallStatus') || rec.status;
+      if (body.get('CallDuration')) rec.durationSeconds = Number(body.get('CallDuration'));
+      rec.statusHistory = rec.statusHistory || [];
+      rec.statusHistory.push({ status: rec.status, at: new Date().toISOString() });
+      saveRecord(rec);
+      if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(rec.status) && !rec.finalizing) {
+        finalizeCall(rec, 'twilio-status:' + rec.status).catch(e => console.error('finalize err', e));
+      }
+    }
+    res.writeHead(200, { 'Content-Type': 'text/xml' });
+    return res.end('<Response/>');
+  }
+
+  // Bearer-authenticated API
+  const auth = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (auth !== CALLBOT_SECRET) return send(401, { error: 'unauthorized' });
+
+  if (url.pathname === '/v1/calls' && req.method === 'POST') {
+    let body;
+    try { body = JSON.parse(await readBody(req) || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    const { to, goal, behavior, voice } = body;
+    const from = body.from || FROM_NUMBER;
+    if (!to || !goal) return send(400, { error: 'to and goal required' });
+    if (!/^\+\d{6,15}$/.test(to)) return send(400, { error: 'to must be E.164' });
+    if (String(goal).length > 1500) return send(400, { error: 'goal too long' });
+    if (behavior && String(behavior).length > 1000) return send(400, { error: 'behavior too long' });
+    const VOICES = ['marin','cedar','alloy','ash','ballad','coral','echo','sage','shimmer','verse'];
+    const chosenVoice = (voice && VOICES.includes(String(voice))) ? String(voice) : (process.env.CALLBOT_VOICE || 'marin');
+    if (voice && !VOICES.includes(String(voice))) return send(400, { error: 'unknown voice; allowed: ' + VOICES.join(', ') });
+    const streamUrl = 'wss://' + PUBLIC_HOST + '/media-stream';
+    const escXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    let streamParams = '<Parameter name="goal" value="' + escXml(goal) + '"/>';
+    if (behavior) streamParams += '<Parameter name="behavior" value="' + escXml(behavior) + '"/>';
+    streamParams += '<Parameter name="voice" value="' + escXml(chosenVoice) + '"/>';
+    const twiml = '<Response><Connect><Stream url="' + streamUrl + '">' + streamParams + '</Stream></Connect></Response>';
+    let call;
+    try {
+      call = await twilioPost('/2010-04-01/Accounts/' + TWILIO_SID + '/Calls.json', {
+        To: to, From: from, Twiml: twiml,
+        TimeLimit: String(MAX_CALL_SECONDS),
+        StatusCallback: 'https://' + PUBLIC_HOST + '/twilio-status',
+        StatusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+        StatusCallbackMethod: 'POST'
+      });
+    } catch (e) { return send(502, { error: 'twilio rejected: ' + e.message }); }
+    const rec = {
+      callSid: call.sid, to, from, goal, behavior: behavior || null, voice: chosenVoice,
+      status: call.status, createdAt: new Date().toISOString(),
+      transcript: [], events: []
+    };
+    saveRecord(rec);
+    return send(200, { callSid: call.sid, status: call.status, url: '/v1/calls/' + call.sid });
+  }
+
+  if (url.pathname === '/v1/calls' && req.method === 'GET') {
+    // list all records on disk, newest first
+    const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json'));
+    const recs = files.map(f => loadRecord(f.replace(/\.json$/, ''))).filter(Boolean)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(r => ({ callSid: r.callSid, to: r.to, goal: r.goal.slice(0, 120), status: r.status, createdAt: r.createdAt, durationSeconds: r.durationSeconds, summary: r.summary }));
+    return send(200, { calls: recs });
+  }
+
+  const m = url.pathname.match(/^\/v1\/calls\/(CA[0-9a-f]{32})$/);
+  if (m && req.method === 'GET') {
+    const rec = loadRecord(m[1]);
+    if (!rec) return send(404, { error: 'not found' });
+    return send(200, rec);
+  }
+
+  send(404, { error: 'not found' });
+});
+
+// ---------------- WS bridge ----------------
+const wss = new WebSocket.Server({ server, path: '/media-stream' });
+
+async function finalizeCall(rec, reason) {
+  if (rec.finalized) return;
+  rec.finalizing = true; if (rec.status === "queued") rec.status = "completed";
+  rec.endedAt = new Date().toISOString();
+  rec.endedReason = reason;
+  if (rec.transcript && rec.transcript.length > 0 && !rec.summary) {
+    try {
+      const text = rec.transcript.map(t => (t.speaker === 'user' ? 'Callee' : 'Bot') + ': ' + t.text).join('\n');
+      const r = await openaiChat([
+        { role: 'system', content: 'Summarize this phone call in 2-4 sentences: what the bot wanted, what the other person said, and whether the goal was achieved. Then add one line: "Goal achieved: yes/no/unclear". Goal was: ' + rec.goal },
+        { role: 'user', content: text }
+      ]);
+      rec.summary = r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content || null;
+    } catch (e) { rec.summaryError = e.message; }
+  }
+  rec.finalized = true;
+  delete rec.finalizing;
+  saveRecord(rec);
+  console.log('finalized', rec.callSid, 'reason:', reason, 'summary:', (rec.summary || 'none').slice(0, 100));
+}
+
+function hangUp(callSid) {
+  twilioPost('/2010-04-01/Accounts/' + TWILIO_SID + '/Calls/' + callSid + '.json', { Status: 'completed' })
+    .then(() => console.log('hung up', callSid))
+    .catch(e => console.error('hangup failed', callSid, e.message));
+}
+
+wss.on('connection', (twilioWs) => {
+  let streamSid = null, callSid = null, goal = null, behavior = null, sessionVoice = 'marin';
+  let openaiWs = null, openaiReady = false, kickoffSent = false;
+  let latestMediaTimestamp = 0, responseStartTimestamp = null, lastAssistantItem = null;
+  let rec = null;
+  const log = (msg, e) => { console.log('[' + (callSid || 'nocall') + ']', msg, e ? JSON.stringify(e.error || e) : ''); if (rec) { rec.events = rec.events || []; rec.events.push({ at: new Date().toISOString(), msg }); } };
+
+  const sendOpenAI = (obj) => { if (openaiWs && openaiWs.readyState === WebSocket.OPEN) openaiWs.send(JSON.stringify(obj)); };
+
+  const kickoff = () => {
+    if (kickoffSent || !openaiReady || !streamSid) return;
+    kickoffSent = true;
+    const greeting = "Hi! This is Manuel's automated AI assistant calling on his behalf. Quick heads-up that this call is being transcribed so I can report back to him.";
+    sendOpenAI({ type: 'response.create', response: { instructions: 'The person just answered the phone. In clear English, greet them by saying exactly this, word for word: "' + greeting + '" Then continue naturally toward the call goal, following your session instructions.' } });
+  };
+
+  twilioWs.on('message', (data) => {
+    let msg;
+    try { msg = JSON.parse(data); } catch { return; }
+    switch (msg.event) {
+      case 'start':
+        streamSid = msg.start.streamSid;
+        callSid = msg.start.callSid;
+        goal = (msg.start.customParameters && msg.start.customParameters.goal) || 'Have a short friendly chat.';
+        behavior = (msg.start.customParameters && msg.start.customParameters.behavior) || null;
+        sessionVoice = (msg.start.customParameters && msg.start.customParameters.voice) || 'marin';
+        rec = loadRecord(callSid) || { callSid, goal, transcript: [], events: [], createdAt: new Date().toISOString() };
+        rec.streamStartedAt = new Date().toISOString();
+        saveRecord(rec);
+        log('stream start, goal: ' + goal.slice(0, 80));
+        openaiWs = new WebSocket('wss://api.openai.com/v1/realtime?model=gpt-realtime', {
+          headers: { 'Authorization': 'Bearer ' + OPENAI_KEY }
+        });
+        openaiWs.on('open', () => {
+          log('openai ws open');
+          sendOpenAI({
+            type: 'session.update',
+            session: {
+              type: 'realtime',
+              instructions: buildInstructions(goal, behavior),
+              audio: {
+                input: {
+                  format: { type: 'audio/pcmu' },
+                  transcription: { model: 'gpt-4o-mini-transcribe' },
+                  turn_detection: { type: 'server_vad', threshold: 0.55, prefix_padding_ms: 400, silence_duration_ms: 800, create_response: true, interrupt_response: true }
+                },
+                output: { format: { type: 'audio/pcmu' }, voice: sessionVoice }
+              },
+              tools: [{ type: 'function', name: 'end_call', description: 'End the phone call. Use after saying goodbye, once the goal is achieved or clearly cannot be achieved, or if the person asks to stop.', parameters: { type: 'object', properties: { reason: { type: 'string' } } } }]
+            }
+          });
+        });
+        openaiWs.on('message', (d) => {
+          let e;
+          try { e = JSON.parse(d.toString()); } catch { return; }
+          switch (e.type) {
+            case 'session.updated':
+              openaiReady = true;
+              log('openai session ready');
+              kickoff();
+              break;
+            case 'response.output_audio.delta':
+            case 'response.audio.delta': {
+              if (!streamSid || !e.delta) break;
+              const itemId = e.item_id || (e.response_id ? e.response_id : null);
+              if (e.item_id) lastAssistantItem = e.item_id;
+              if (responseStartTimestamp === null) responseStartTimestamp = latestMediaTimestamp;
+              twilioWs.send(JSON.stringify({ event: 'media', streamSid, media: { payload: e.delta } }));
+              twilioWs.send(JSON.stringify({ event: 'mark', streamSid, mark: { name: 'botAudio' } }));
+              break;
+            }
+            case 'response.output_audio_transcript.done':
+            case 'response.audio_transcript.done':
+              if (rec && e.transcript) { rec.transcript.push({ speaker: 'assistant', text: e.transcript, at: new Date().toISOString() }); saveRecord(rec); }
+              log('bot said: ' + (e.transcript || '').slice(0, 90));
+              break;
+            case 'conversation.item.input_audio_transcription.completed':
+              if (rec && e.transcript) { rec.transcript.push({ speaker: 'user', text: e.transcript, at: new Date().toISOString() }); saveRecord(rec); }
+              log('callee said: ' + (e.transcript || '').slice(0, 90));
+              break;
+            case 'input_audio_buffer.speech_started':
+              // interruption: cut off bot audio
+              if (streamSid) twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
+              if (lastAssistantItem && responseStartTimestamp !== null) {
+                const elapsed = latestMediaTimestamp - responseStartTimestamp;
+                if (elapsed > 0) sendOpenAI({ type: 'conversation.item.truncate', item_id: lastAssistantItem, content_index: 0, audio_end_ms: elapsed });
+              }
+              lastAssistantItem = null;
+              responseStartTimestamp = null;
+              break;
+            case 'response.output_item.done':
+              if (e.item && e.item.type === 'function_call' && e.item.name === 'end_call') {
+                log('end_call invoked: ' + (e.item.arguments || ''));
+                sendOpenAI({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: e.item.call_id, output: '{"ok":true}' } });
+                // give the goodbye a moment to finish, then hang up
+                setTimeout(() => { if (callSid) hangUp(callSid); }, 6000);
+              }
+              break;
+            case 'response.done':
+              if (e.response && e.response.usage && rec) rec.lastUsage = e.response.usage;
+              break;
+            case 'error':
+              log('OPENAI ERROR', e);
+              break;
+            default:
+              break;
+          }
+        });
+        openaiWs.on('close', () => { log('openai ws closed'); });
+        openaiWs.on('error', (err) => { log('openai ws error: ' + err.message); });
+        break;
+      case 'media':
+        latestMediaTimestamp = Number(msg.media.timestamp);
+        sendOpenAI({ type: 'input_audio_buffer.append', audio: msg.media.payload });
+        break;
+      case 'mark':
+        break;
+      case 'stop':
+        log('stream stop');
+        if (openaiWs) try { openaiWs.close(); } catch {}
+        if (rec) finalizeCall(rec, 'stream-stop').catch(e => console.error('finalize err', e));
+        break;
+    }
+  });
+
+  twilioWs.on('close', () => {
+    if (openaiWs) try { openaiWs.close(); } catch {}
+    if (rec) finalizeCall(rec, 'twilio-ws-close').catch(e => console.error('finalize err', e));
+  });
+});
+
+server.listen(PORT, () => console.log('callbot listening on :' + PORT));
