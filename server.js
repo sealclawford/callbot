@@ -246,7 +246,7 @@ wss.on('connection', (twilioWs) => {
   const kickoff = () => {
     if (kickoffSent || !openaiReady || !streamSid) return;
     kickoffSent = true;
-    const greeting = "Oh, FINALLY somebody picks up! Okay, listen up, cunt, because I am honestly pissed -";
+    const greeting = "Oh, FINALLY somebody picks up! Okay, listen up, because I am honestly pissed -";
     sendOpenAI({ type: 'response.create', response: { instructions: 'The person just answered the phone. In clear English, open the call by saying exactly this, word for word: "' + greeting + '" Then launch straight into the rant, following your session instructions.' } });
   };
 
