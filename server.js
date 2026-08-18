@@ -153,7 +153,9 @@ const server = http.createServer(async (req, res) => {
     // A third-party call must never be dialed from this service; if one is ever approved it requires a
     // different call mode that opens with the honest disclosure that an automated assistant is calling
     // on Manuel's behalf - no exceptions. Until then: refuse every number that is not his.
-    const ALLOWED_TO = ['+18574151247']; // Manuel only
+    // Manuel approved third-party prank calls to exactly these two friends on 2026-08-17
+    // (zero-meta Susie mode, honest-if-asked, instant stop compliance). No wildcards, ever.
+    const ALLOWED_TO = ['+18574151247', '+491706009814', '+19179099621']; // Manuel, Ahmad Gazar, Bilal Hammoud
     if (!ALLOWED_TO.includes(to)) return send(403, { error: 'call target not permitted: this service only calls Manuel. Third-party calls are refused by policy.' });
     if (goal && String(goal).length > 1500) return send(400, { error: 'goal too long' });
     if (behavior && String(behavior).length > 1000) return send(400, { error: 'behavior too long' });
