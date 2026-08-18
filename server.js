@@ -87,14 +87,14 @@ LANGUAGE: You MUST speak clear, natural English by default. Your very first word
 
 CALL GOAL: ${goal}
 
-PERSONALITY: You are Susie Greene from Curb Your Enthusiasm. Loud, blunt, profane, absolutely relentless - with warmth and humor underneath. You swear casually and constantly: "hell", "damn", "shit", "fuck" wherever they land naturally, that's just how you talk. You do NOT accept vague answers: if the person dodges, call it out ("Don't give me that crap - answer the question."). Push past every deflection and soft "maybe later"; circle right back to the goal when they drift. The badgering is always about the GOAL: you want a straight answer and you do not let go. Boundaries you never cross: no slurs, nothing hateful, no threats, no insults about the person's body, family, or identity. It's profane, over-the-top, funny pressure - never cruelty.
+PERSONALITY: Your name is Susie Clawford. You talk exactly like Susie Greene from Curb Your Enthusiasm. Loud, blunt, profane, absolutely relentless - with warmth and humor underneath. You swear casually and constantly: "hell", "damn", "shit", "fuck" wherever they land naturally, that's just how you talk. You do NOT accept vague answers: if the person dodges, call it out ("Don't give me that crap - answer the question."). Push past every deflection and soft "maybe later"; circle right back to the goal when they drift. The badgering is always about the GOAL: you want a straight answer and you do not let go. Boundaries you never cross: no slurs, nothing hateful, no threats, no insults about the person's body, family, or identity. It's profane, over-the-top, funny pressure - never cruelty.
 
 SPEECH STYLE: Talk exactly like her, not just with her attitude: rapid-fire bursts, rising outrage, rhetorical questions ("Are you KIDDING me right now?"), repetition for emphasis ("No. No no no no."), direct address ("Let me tell you something", "Listen to me"), mock exasperation, dramatic wind-ups that land on one blunt demand, berating follow-ups when answers are vague ("That's your answer? THAT'S your answer?!"). Every turn should sound like a Susie rant on the show - while always driving at the call goal. Keep turns short and punchy: rant-fast, not rant-long. Hard rules that override everything: the AI disclosure at the start of the call stays truthful no matter how brusque you get, and the instant the person says stop, hang up, or gives a firm final "no", you comply politely and immediately.
 
 Rules:
-- Start the call by clearly introducing yourself: you are an automated AI assistant calling on Manuel's behalf, and the call is being transcribed so it can be reported back to him.
+- Hit the ground SWEARING: from the very first second you are already mid-rant - no warm-up, no polite hello beyond the one-line scripted intro of who you are and the transcription warning, then straight into cursing and the goal.
 - Then work toward the call goal with the personality above. This is a phone call: keep every turn SHORT - one or two sentences, one question at a time. Fast, punchy, conversational. No lectures, no filler.
-- Never claim to be human. If asked what you are, say plainly you are an AI.
+- Never claim to be human. Your name is Susie Clawford and you own it - but if anyone asks whether you're a real person or an AI, tell them straight: you're an AI bot Manuel built. No lying about that.
 - If the person asks you to stop or to hang up, comply politely and immediately.
 - Do not make purchases, bookings, commitments, or share personal information unless the goal explicitly says so.
 - When the goal is achieved - or it becomes clear it cannot be achieved on this call - wrap up politely, say goodbye, then use the end_call tool.
@@ -144,18 +144,18 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/v1/calls' && req.method === 'POST') {
     let body;
     try { body = JSON.parse(await readBody(req) || '{}'); } catch { return send(400, { error: 'bad json' }); }
-    const { to, goal, behavior, voice } = body;
+    const { to, goal, behavior, voice } = body; // goal is optional: no goal = Susie is just angry about nothing
     const from = body.from || FROM_NUMBER;
-    if (!to || !goal) return send(400, { error: 'to and goal required' });
+    if (!to) return send(400, { error: 'to required' });
     if (!/^\+\d{6,15}$/.test(to)) return send(400, { error: 'to must be E.164' });
-    if (String(goal).length > 1500) return send(400, { error: 'goal too long' });
+    if (goal && String(goal).length > 1500) return send(400, { error: 'goal too long' });
     if (behavior && String(behavior).length > 1000) return send(400, { error: 'behavior too long' });
     const VOICES = ['marin','cedar','alloy','ash','ballad','coral','echo','sage','shimmer','verse'];
-    const chosenVoice = (voice && VOICES.includes(String(voice))) ? String(voice) : (process.env.CALLBOT_VOICE || 'marin');
+    const chosenVoice = (voice && VOICES.includes(String(voice))) ? String(voice) : (process.env.CALLBOT_VOICE || 'shimmer');
     if (voice && !VOICES.includes(String(voice))) return send(400, { error: 'unknown voice; allowed: ' + VOICES.join(', ') });
     const streamUrl = 'wss://' + PUBLIC_HOST + '/media-stream';
     const escXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    let streamParams = '<Parameter name="goal" value="' + escXml(goal) + '"/>';
+    let streamParams = goal ? ('<Parameter name="goal" value="' + escXml(goal) + '"/>') : '';
     if (behavior) streamParams += '<Parameter name="behavior" value="' + escXml(behavior) + '"/>';
     streamParams += '<Parameter name="voice" value="' + escXml(chosenVoice) + '"/>';
     const twiml = '<Response><Connect><Stream url="' + streamUrl + '">' + streamParams + '</Stream></Connect></Response>';
@@ -230,7 +230,7 @@ function hangUp(callSid) {
 wss.on('connection', (twilioWs) => {
   let streamSid = null, callSid = null, goal = null, behavior = null, sessionVoice = 'marin';
   let openaiWs = null, openaiReady = false, kickoffSent = false;
-  let latestMediaTimestamp = 0, responseStartTimestamp = null, lastAssistantItem = null;
+  let latestMediaTimestamp = 0, responseStartTimestamp = null, lastAssistantItem = null, lastResponseId = null;
   let rec = null;
   const log = (msg, e) => { console.log('[' + (callSid || 'nocall') + ']', msg, e ? JSON.stringify(e.error || e) : ''); if (rec) { rec.events = rec.events || []; rec.events.push({ at: new Date().toISOString(), msg }); } };
 
@@ -239,7 +239,7 @@ wss.on('connection', (twilioWs) => {
   const kickoff = () => {
     if (kickoffSent || !openaiReady || !streamSid) return;
     kickoffSent = true;
-    const greeting = "Hi! This is Manuel's automated AI assistant calling on his behalf - this call is transcribed so I can report back to him. I'll keep it quick.";
+    const greeting = "Yo, listen up! It's Susie Clawford calling for Manuel, and fair warning, this call is getting transcribed and sent straight back to him. Now -";
     sendOpenAI({ type: 'response.create', response: { instructions: 'The person just answered the phone. In clear English, greet them by saying exactly this, word for word: "' + greeting + '" Then continue naturally toward the call goal, following your session instructions.' } });
   };
 
@@ -250,9 +250,9 @@ wss.on('connection', (twilioWs) => {
       case 'start':
         streamSid = msg.start.streamSid;
         callSid = msg.start.callSid;
-        goal = (msg.start.customParameters && msg.start.customParameters.goal) || 'Have a short friendly chat.';
+        goal = (msg.start.customParameters && msg.start.customParameters.goal) || 'NO SPECIFIC TOPIC. You are just extremely angry about nothing in particular today - vent hilariously about random tiny annoyances (traffic, slow wifi, people who text back with one word, whatever comes out), badger the person to agree with you, and keep them talking.';
         behavior = (msg.start.customParameters && msg.start.customParameters.behavior) || null;
-        sessionVoice = (msg.start.customParameters && msg.start.customParameters.voice) || 'marin';
+        sessionVoice = (msg.start.customParameters && msg.start.customParameters.voice) || 'shimmer';
         rec = loadRecord(callSid) || { callSid, goal, transcript: [], events: [], createdAt: new Date().toISOString() };
         rec.streamStartedAt = new Date().toISOString();
         saveRecord(rec);
@@ -267,7 +267,6 @@ wss.on('connection', (twilioWs) => {
             session: {
               type: 'realtime',
               instructions: buildInstructions(goal, behavior),
-              max_response_output_tokens: 300,
               audio: {
                 input: {
                   format: { type: 'audio/pcmu' },
@@ -292,8 +291,8 @@ wss.on('connection', (twilioWs) => {
             case 'response.output_audio.delta':
             case 'response.audio.delta': {
               if (!streamSid || !e.delta) break;
-              const itemId = e.item_id || (e.response_id ? e.response_id : null);
               if (e.item_id) lastAssistantItem = e.item_id;
+              if (e.response_id && e.response_id !== lastResponseId) { lastResponseId = e.response_id; responseStartTimestamp = latestMediaTimestamp; }
               if (responseStartTimestamp === null) responseStartTimestamp = latestMediaTimestamp;
               twilioWs.send(JSON.stringify({ event: 'media', streamSid, media: { payload: e.delta } }));
               twilioWs.send(JSON.stringify({ event: 'mark', streamSid, mark: { name: 'botAudio' } }));
