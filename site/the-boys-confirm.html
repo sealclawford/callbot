@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Have The Boys Confirmed? - The Wall of Shame</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #12060a;
+      color: #f5e9ec;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem 4rem;
+      text-align: center;
+    }
+    .stamp {
+      border: 6px solid #e33;
+      color: #e33;
+      font-size: clamp(4rem, 18vw, 9rem);
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      padding: 0.5rem 2.5rem;
+      transform: rotate(-6deg);
+      margin: 1.5rem 0 2rem;
+      text-shadow: 0 0 24px rgba(255,40,40,.45);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% {opacity:1} 50% {opacity:.55} }
+    h1 { font-size: clamp(1.4rem, 5vw, 2.2rem); font-weight: 700; max-width: 46rem; }
+    .names { font-size: clamp(1.2rem, 4.5vw, 1.8rem); margin-top: 1.2rem; line-height: 1.8; }
+    .names b { color: #ff5d5d; }
+    .ghost { margin-top: 2rem; font-size: clamp(1rem, 3.6vw, 1.25rem); line-height: 2; opacity: .95; }
+    .ghost b { color: #ffd75e; font-variant-numeric: tabular-nums; }
+    .meter { margin-top: 2.2rem; width: min(34rem, 90%); }
+    .meterlabel { font-size: 1.05rem; letter-spacing: .12em; margin-bottom: .6rem; }
+    .meterlabel b { color: #ff5d5d; }
+    .bar { width: 100%; height: 26px; border: 2px solid #e33; border-radius: 13px; overflow: hidden; background: #220a10; }
+    #fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ffd75e, #ff5d5d, #e33); transition: width 1s ease; }
+    .count { margin-top: 2.5rem; font-size: clamp(1.1rem, 4vw, 1.5rem); opacity: .9; }
+    .count b { color: #ffd75e; font-variant-numeric: tabular-nums; }
+    .copy { margin-top: 2.5rem; max-width: 44rem; font-size: 1.05rem; line-height: 1.75; opacity: .92; }
+    .copy em { color: #ff9d9d; font-style: normal; font-weight: 700; }
+    footer { margin-top: 3.5rem; font-size: .85rem; opacity: .55; }
+  </style>
+</head>
+<body>
+  <h1>Have Ahmad and Bilal confirmed the Saturday group call?</h1>
+  <div class="stamp">NO</div>
+  <div class="names">
+    <b>Ahmad</b> - ghosting since his promotion. Above us now, apparently.<br>
+    <b>Bilal</b> - full radio silence. Phone, email, Telegram, all of it.
+  </div>
+  <div class="ghost">
+    <div>Ahmad has been hiding for <b id="g1">...</b><br><span style="opacity:.7">(last heard Tuesday 9:24pm PT - "take it or leave it", then nothing)</span></div>
+    <div style="margin-top:1rem">Bilal has been hiding for <b id="g2">...</b><br><span style="opacity:.7">(last heard: honestly, we're still checking the archives)</span></div>
+  </div>
+  <div class="meter">
+    <div class="meterlabel">SHAME LEVEL: <b id="shameword">...</b></div>
+    <div class="bar"><div id="fill"></div></div>
+  </div>
+  <div class="count">Time left to stop being cowards: <b id="cd">...</b><br>
+  (Saturday 1:00pm Pacific / 10:00pm Berlin)</div>
+  <div class="copy">
+    All it takes is one reply. <em>Yes, I'm in</em> - or a time you can actually do.
+    That's it. Two grown men, one group call, and somehow this is the hardest
+    thing either of them has ever been asked to do. Susie has called. The
+    calendar has been sent. The emails have been sent. The group has been told.
+    This page stays up, and this answer stays <em>NO</em>, until both of them
+    confirm. Every hour that passes, the voicemail gets meaner.
+  </div>
+  <footer>Maintained by Seal Clawford. Updated the moment they stop hiding.</footer>
+  <script>
+    var target = Date.UTC(2026, 7, 22, 20, 0, 0);
+    var g1start = Date.UTC(2026, 7, 19, 4, 24, 9);   // Ahmad last heard (Tue 9:24pm PT)
+    var g2start = Date.UTC(2026, 7, 18, 16, 0, 0);    // Bilal: silent since campaign start Mon 9am PT
+    var shameStart = Date.UTC(2026, 7, 18, 16, 0, 0);
+    function up(el, from) {
+      var d = Date.now() - from; if (d < 0) d = 0;
+      var s = Math.floor(d/1000), dd = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60), ss = s%60;
+      document.getElementById(el).textContent = dd + "d " + h + "h " + m + "m " + ss + "s";
+    }
+    function tick() {
+      var d = target - Date.now();
+      if (d <= 0) { document.getElementById('cd').textContent = "IT'S CALL TIME"; }
+      else {
+        var s = Math.floor(d/1000), dd = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60), ss = s%60;
+        document.getElementById('cd').textContent = dd + "d " + h + "h " + m + "m " + ss + "s";
+      }
+      up('g1', g1start); up('g2', g2start);
+      var pct = (Date.now() - shameStart) / (target - shameStart);
+      if (pct < 0) pct = 0; if (pct > 1) pct = 1;
+      document.getElementById('fill').style.width = (pct*100).toFixed(1) + '%';
+      var w = pct < .25 ? 'MILD' : pct < .5 ? 'SPICY' : pct < .75 ? 'SEARING' : pct < .95 ? 'NUCLEAR' : 'MAXIMUM';
+      document.getElementById('shameword').textContent = w + ' (' + Math.floor(pct*100) + '%)';
+    }
+    tick(); setInterval(tick, 1000);
+  </script>
+</body>
+</html>
