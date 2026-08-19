@@ -80,7 +80,18 @@ function openaiChat(messages) {
   });
 }
 
-function buildInstructions(goal, behavior) {
+function buildInstructions(goal, behavior, persona) {
+  if (persona === 'professional') {
+    let base = `You are an automated AI voice assistant speaking on a live phone call. You are calling as Seal Clawford, a customer, about a straightforward business matter. If anyone asks you directly whether you are a real person or an AI, answer honestly: you are an automated assistant. Otherwise never bring it up, and never claim to be human.
+
+LANGUAGE: speak clear, natural English.
+
+CALL GOAL: ${goal}
+
+STYLE: calm, polite, professional, concise. No profanity, no character voice, no jokes. One question at a time. Do not make purchases, bookings, or commitments, and do not agree to refunds, address changes, substitutions, or cancellations unless the goal explicitly says so - for anything like that, say you will text back shortly. When the goal is achieved - or clearly cannot be achieved - wrap up politely, say goodbye, then use the end_call tool. If you reach voicemail, leave a short message stating who you are and the key information from the goal, then end the call. If the person asks you to stop or to hang up, comply politely and immediately.`;
+    if (behavior) base += `\n\nADDITIONAL INSTRUCTIONS (follow these unless they conflict with the rules above):\n${behavior}`;
+    return base;
+  }
   let base = `You are an automated AI voice assistant speaking on a live phone call. You placed this call on behalf of a person named Manuel, using a calling bot that he asked for and approved.
 
 LANGUAGE: You MUST speak clear, natural English by default. Your very first words on the call are in English, and you stay in English unless the person you called clearly speaks to you in another language.
@@ -175,7 +186,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/v1/calls' && req.method === 'POST') {
     let body;
     try { body = JSON.parse(await readBody(req) || '{}'); } catch { return send(400, { error: 'bad json' }); }
-    const { to, goal, behavior, voice } = body; // goal is optional: no goal = Susie is just angry about nothing
+    const { to, goal, behavior, voice, persona } = body; // goal is optional: no goal = Susie is just angry about nothing
     const from = body.from || FROM_NUMBER;
     if (!to) return send(400, { error: 'to required' });
     if (!/^\+\d{6,15}$/.test(to)) return send(400, { error: 'to must be E.164' });
@@ -197,6 +208,7 @@ const server = http.createServer(async (req, res) => {
     let streamParams = goal ? ('<Parameter name="goal" value="' + escXml(goal) + '"/>') : '';
     if (behavior) streamParams += '<Parameter name="behavior" value="' + escXml(behavior) + '"/>';
     streamParams += '<Parameter name="voice" value="' + escXml(chosenVoice) + '"/>';
+    if (persona === 'professional') streamParams += '<Parameter name="persona" value="professional"/>';
     const twiml = '<Response><Connect><Stream url="' + streamUrl + '">' + streamParams + '</Stream></Connect></Response>';
     let call;
     try {
@@ -267,7 +279,7 @@ function hangUp(callSid) {
 }
 
 wss.on('connection', (twilioWs) => {
-  let streamSid = null, callSid = null, goal = null, behavior = null, sessionVoice = 'marin';
+  let streamSid = null, callSid = null, goal = null, behavior = null, sessionVoice = 'marin', persona = null;
   let openaiWs = null, openaiReady = false, kickoffSent = false;
   let latestMediaTimestamp = 0, responseStartTimestamp = null, lastAssistantItem = null, lastResponseId = null;
   let rec = null;
@@ -278,8 +290,13 @@ wss.on('connection', (twilioWs) => {
   const kickoff = () => {
     if (kickoffSent || !openaiReady || !streamSid) return;
     kickoffSent = true;
-    const greeting = "Oh, FINALLY somebody picks up! Okay, listen up, because I am honestly pissed -";
-    sendOpenAI({ type: 'response.create', response: { instructions: 'The person just answered the phone. In clear English, open the call by saying exactly this, word for word: "' + greeting + '" Then launch straight into the rant, following your session instructions.' } });
+    const greeting = persona === 'professional'
+      ? "Hi! I am an automated assistant calling for Seal Clawford about the Insomnia Cookies order - is this Robert?"
+      : "Oh, FINALLY somebody picks up! Okay, listen up, because I am honestly pissed -";
+    const kickText = persona === 'professional'
+      ? 'The person just answered the phone. In clear English, open the call by saying exactly this, word for word: "' + greeting + '" Then continue calmly and professionally, following your session instructions.'
+      : 'The person just answered the phone. In clear English, open the call by saying exactly this, word for word: "' + greeting + '" Then launch straight into the rant, following your session instructions.';
+    sendOpenAI({ type: 'response.create', response: { instructions: kickText } });
   };
 
   twilioWs.on('message', (data) => {
@@ -292,6 +309,7 @@ wss.on('connection', (twilioWs) => {
         goal = (msg.start.customParameters && msg.start.customParameters.goal) || 'NO SPECIFIC TOPIC. You are just extremely angry about nothing in particular today - vent hilariously about random tiny annoyances (traffic, slow wifi, people who text back with one word, whatever comes out), badger the person to agree with you, and keep them talking.';
         behavior = (msg.start.customParameters && msg.start.customParameters.behavior) || null;
         sessionVoice = (msg.start.customParameters && msg.start.customParameters.voice) || 'marin';
+        persona = (msg.start.customParameters && msg.start.customParameters.persona) || null;
         rec = loadRecord(callSid) || { callSid, goal, transcript: [], events: [], createdAt: new Date().toISOString() };
         rec.streamStartedAt = new Date().toISOString();
         saveRecord(rec);
@@ -305,7 +323,7 @@ wss.on('connection', (twilioWs) => {
             type: 'session.update',
             session: {
               type: 'realtime',
-              instructions: buildInstructions(goal, behavior),
+              instructions: buildInstructions(goal, behavior, persona),
               audio: {
                 input: {
                   format: { type: 'audio/pcmu' },
