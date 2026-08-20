@@ -1,0 +1,57 @@
+{
+  "callSid": "CA3480f5130a68646552b8819b82de62d4",
+  "to": "+491706009814",
+  "from": "+18573416628",
+  "goal": "Susie Clawford, ONE-LINER voicemail, under fifteen seconds, deadpan: Ahmad. Saturday. 1pm Pacific, 10pm Berlin. Yes or no. A one-word reply counts as yes. Your name is on the wall of shame at sealclawford.github.io/the-boys-confirm and the countdown is running. Stop being a corporate cunt.",
+  "behavior": null,
+  "voice": "marin",
+  "status": "completed",
+  "createdAt": "2026-08-20T00:16:25.085Z",
+  "transcript": [],
+  "events": [
+    {
+      "at": "2026-08-20T00:16:28.162Z",
+      "msg": "stream start, goal: Susie Clawford, ONE-LINER voicemail, under fifteen seconds, deadpan: Ahmad. Satu"
+    },
+    {
+      "at": "2026-08-20T00:16:29.206Z",
+      "msg": "openai ws open"
+    },
+    {
+      "at": "2026-08-20T00:16:29.284Z",
+      "msg": "openai session ready"
+    },
+    {
+      "at": "2026-08-20T00:16:57.103Z",
+      "msg": "stream stop"
+    },
+    {
+      "at": "2026-08-20T00:16:57.176Z",
+      "msg": "openai ws closed"
+    }
+  ],
+  "streamStartedAt": "2026-08-20T00:16:28.162Z",
+  "lastUsage": {
+    "total_tokens": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "input_token_details": {
+      "text_tokens": 0,
+      "audio_tokens": 0,
+      "image_tokens": 0,
+      "cached_tokens": 0,
+      "cached_tokens_details": {
+        "text_tokens": 0,
+        "audio_tokens": 0,
+        "image_tokens": 0
+      }
+    },
+    "output_token_details": {
+      "text_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "endedAt": "2026-08-20T00:16:57.103Z",
+  "endedReason": "stream-stop",
+  "finalized": true
+}
