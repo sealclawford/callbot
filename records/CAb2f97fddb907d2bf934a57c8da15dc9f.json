@@ -14,26 +14,26 @@
   "from_formatted": "(857) 341-6628",
   "group_sid": null,
   "parent_call_sid": null,
-  "phone_number_sid": "PN3f82daabb3834930882ae9c93b9f15b2",
+  "phone_number_sid": "PN[TOKEN]",
   "price": "-0.37630",
   "price_unit": "USD",
   "queue_time": "0",
-  "sid": "CAb2f97fddb907d2bf934a57c8da15dc9f",
+  "sid": "CA[TOKEN]",
   "start_time": "Tue, 18 Aug 2026 20:00:19 +0000",
   "status": "completed",
   "subresource_uris": {
-    "events": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/Events.json",
-    "notifications": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/Notifications.json",
-    "payments": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/Payments.json",
-    "recordings": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/Recordings.json",
-    "siprec": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/Siprec.json",
-    "streams": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/Streams.json",
-    "transcriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/Transcriptions.json",
-    "user_defined_message_subscriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/UserDefinedMessageSubscriptions.json",
-    "user_defined_messages": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f/UserDefinedMessages.json"
+    "events": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Events.json",
+    "notifications": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Notifications.json",
+    "payments": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Payments.json",
+    "recordings": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Recordings.json",
+    "siprec": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Siprec.json",
+    "streams": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Streams.json",
+    "transcriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Transcriptions.json",
+    "user_defined_message_subscriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/UserDefinedMessageSubscriptions.json",
+    "user_defined_messages": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/UserDefinedMessages.json"
   },
   "to": "+491706009814",
   "to_formatted": "+491706009814",
   "trunk_sid": "",
-  "uri": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAb2f97fddb907d2bf934a57c8da15dc9f.json"
+  "uri": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN].json"
 }

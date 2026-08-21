@@ -14,26 +14,26 @@
   "from_formatted": "(857) 341-6628",
   "group_sid": null,
   "parent_call_sid": null,
-  "phone_number_sid": "PN3f82daabb3834930882ae9c93b9f15b2",
+  "phone_number_sid": "PN[TOKEN]",
   "price": null,
   "price_unit": "USD",
   "queue_time": "0",
-  "sid": "CAc443bb39254558643d88545b987452e8",
+  "sid": "CA[TOKEN]",
   "start_time": "Tue, 18 Aug 2026 01:15:23 +0000",
   "status": "completed",
   "subresource_uris": {
-    "events": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/Events.json",
-    "notifications": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/Notifications.json",
-    "payments": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/Payments.json",
-    "recordings": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/Recordings.json",
-    "siprec": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/Siprec.json",
-    "streams": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/Streams.json",
-    "transcriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/Transcriptions.json",
-    "user_defined_message_subscriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/UserDefinedMessageSubscriptions.json",
-    "user_defined_messages": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8/UserDefinedMessages.json"
+    "events": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Events.json",
+    "notifications": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Notifications.json",
+    "payments": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Payments.json",
+    "recordings": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Recordings.json",
+    "siprec": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Siprec.json",
+    "streams": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Streams.json",
+    "transcriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Transcriptions.json",
+    "user_defined_message_subscriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/UserDefinedMessageSubscriptions.json",
+    "user_defined_messages": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/UserDefinedMessages.json"
   },
   "to": "+18574151247",
   "to_formatted": "(857) 415-1247",
   "trunk_sid": "",
-  "uri": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CAc443bb39254558643d88545b987452e8.json"
+  "uri": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN].json"
 }

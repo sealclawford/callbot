@@ -14,26 +14,26 @@
   "from_formatted": "(857) 341-6628",
   "group_sid": null,
   "parent_call_sid": null,
-  "phone_number_sid": "PN3f82daabb3834930882ae9c93b9f15b2",
+  "phone_number_sid": "PN[TOKEN]",
   "price": null,
   "price_unit": "USD",
   "queue_time": "0",
-  "sid": "CA4d0c9916e72e214d9b78702b2391158a",
+  "sid": "CA[TOKEN]",
   "start_time": "Thu, 19 Mar 2026 00:30:18 +0000",
   "status": "busy",
   "subresource_uris": {
-    "events": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/Events.json",
-    "notifications": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/Notifications.json",
-    "payments": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/Payments.json",
-    "recordings": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/Recordings.json",
-    "siprec": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/Siprec.json",
-    "streams": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/Streams.json",
-    "transcriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/Transcriptions.json",
-    "user_defined_message_subscriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/UserDefinedMessageSubscriptions.json",
-    "user_defined_messages": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a/UserDefinedMessages.json"
+    "events": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Events.json",
+    "notifications": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Notifications.json",
+    "payments": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Payments.json",
+    "recordings": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Recordings.json",
+    "siprec": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Siprec.json",
+    "streams": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Streams.json",
+    "transcriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/Transcriptions.json",
+    "user_defined_message_subscriptions": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/UserDefinedMessageSubscriptions.json",
+    "user_defined_messages": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN]/UserDefinedMessages.json"
   },
   "to": "+19179099621",
   "to_formatted": "(917) 909-9621",
   "trunk_sid": "",
-  "uri": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA4d0c9916e72e214d9b78702b2391158a.json"
+  "uri": "/2010-04-01/Accounts/[ACCOUNT]/Calls/CA[TOKEN].json"
 }
