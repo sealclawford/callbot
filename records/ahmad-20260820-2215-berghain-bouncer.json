@@ -1,0 +1,21 @@
+{
+  "status": "completed",
+  "duration": null,
+  "answered_by": null,
+  "ev": [
+    "stream start",
+    "openai ws open",
+    "openai session ready",
+    "stream stop",
+    "openai ws closed"
+  ],
+  "twilio": {
+    "status": "completed",
+    "duration": "29",
+    "answered_by": null,
+    "price": "-0.37630"
+  },
+  "tick": "2026-08-20T22:15",
+  "persona": "berghain-bouncer",
+  "email_subject": "Door policy: no date, no entry (you know the rules)"
+}
