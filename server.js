@@ -295,7 +295,7 @@ wss.on('connection', (twilioWs) => {
       : "Oh, FINALLY somebody picks up! Okay, listen up, because I am honestly pissed -";
     const kickText = persona === 'professional'
       ? 'The person just answered the phone. In clear English, open the call by saying exactly this, word for word: "' + greeting + '" Then continue calmly and professionally, following your session instructions.'
-      : 'The person just answered the phone. In clear English, open the call by saying exactly this, word for word: "' + greeting + '" Then launch straight into the rant, following your session instructions.';
+      : 'The person - or their voicemail - just answered. Follow the CALL GOAL in your session instructions exactly, starting with your very first words: deliver the scripted opening or voicemail message in the goal verbatim, in the persona described there. Do not open with anything else and do not improvise a different scenario. If a human answers, follow the goal instructions for a live conversation.';
     sendOpenAI({ type: 'response.create', response: { instructions: kickText } });
   };
 
