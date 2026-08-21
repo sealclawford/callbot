@@ -1,0 +1,29 @@
+{
+  "sid": null,
+  "status": "completed",
+  "duration": null,
+  "answered_by": null,
+  "events": [
+    {
+      "at": "2026-08-21T04:16:32.808Z",
+      "msg": "stream start, goal: You are Susie, Ahmad's new 6:15 AM wake-up call subscription service, calling hi"
+    },
+    {
+      "at": "2026-08-21T04:16:33.832Z",
+      "msg": "openai ws open"
+    },
+    {
+      "at": "2026-08-21T04:16:33.906Z",
+      "msg": "openai session ready"
+    },
+    {
+      "at": "2026-08-21T04:17:06.014Z",
+      "msg": "stream stop"
+    },
+    {
+      "at": "2026-08-21T04:17:06.085Z",
+      "msg": "openai ws closed"
+    }
+  ],
+  "transcript": []
+}
