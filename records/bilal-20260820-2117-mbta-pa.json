@@ -1,7 +1,1 @@
-{
-  "sid": null,
-  "status": "queued",
-  "duration": null,
-  "answered_by": null,
-  "events": []
-}
+{"tick":"2026-08-20T21:17","persona":"MBTA station PA announcement","callSid":"CAeb28005ef731e06c075da044da50b276","twilio_status":"busy","duration":"0","answered_by":null,"price":null,"note":"Render record stuck at queued; Twilio REST authoritative - busy 0s = declining/DND, no charge"}
