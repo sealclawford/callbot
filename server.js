@@ -196,7 +196,7 @@ const server = http.createServer(async (req, res) => {
     // on Manuel's behalf - no exceptions. Until then: refuse every number that is not his.
     // Manuel approved third-party prank calls to exactly these two friends on 2026-08-17
     // (zero-meta Susie mode, honest-if-asked, instant stop compliance). No wildcards, ever.
-    const ALLOWED_TO = ['+18574151247', '+491706009814', '+19179099621', '+17816924626']; // Manuel, Ahmad Gazar, Bilal Hammoud, Insomnia Cookies store (logistics callback approved via Manuel 2026-08-19)
+    const ALLOWED_TO = ['+18574151247', '+491706009814', '+19179099621', '+17816924626', '+18322603384']; // Manuel, Ahmad Gazar, Bilal Hammoud, Insomnia Cookies store (logistics callback approved via Manuel 2026-08-19), Paarth Shah (UMich referral, Head of Product candidate; one-shot investor demo-eval call approved via Manuel 2026-08-22 12:14am TG + main-agent confirmation 12:05am; honest-automation disclosure mode)
     if (!ALLOWED_TO.includes(to)) return send(403, { error: 'call target not permitted: number is not on the user-approved allowlist. Third-party calls are refused by policy.' });
     if (goal && String(goal).length > 1500) return send(400, { error: 'goal too long' });
     if (behavior && String(behavior).length > 1000) return send(400, { error: 'behavior too long' });
